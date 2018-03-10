@@ -26,6 +26,7 @@ thread2a.on('count',(n)=>console.info(n))
 thread2a.execute(10).then(n=>console.log(n))
 
 // [Example2-b] with progress.  if use arrow function task , can't modify this args. should use scoped emit function.
+// if use typescript: declare function emit(type:string,data?:any):void
 const thread2b = new Thread((async (v)=>{
   let sum = 0
   for(let i=v;i>=0;i--){
