@@ -48,6 +48,17 @@ thread3a.once(40).then(result=>console.log(result))
 thread3b.once(42).then(result=>console.log(result))
 thread3c.once(44).then(result=>console.log(result))
 
+// [Example4] transferable ArrayBuffer. like webworker.postMessage
+const thread4 = new Thread(buffer=>{
+	buffer.set([192,168,10,3])
+	return buffer
+})
+const input = new Uint32Array(256)
+thread4.execute(input,[input.buffer]).then(output=>{
+  // input was transfered. ( can not access from sender )
+  console.log(output)
+})
+
 // finaly.
 thread.terminate()
 ```

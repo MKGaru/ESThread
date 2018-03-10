@@ -61,7 +61,7 @@ export default class Thread{
 		scripts +=
 `
 onmessage = ((builder)=>async function(e){
-	const param =  JSON.parse(e.data)
+	const param =  e.data
 	const id = param.id
 	function emit(type,content){
 		postMessage({
@@ -72,11 +72,19 @@ onmessage = ((builder)=>async function(e){
 	}
 	const task = builder(emit)
 	try{
-		postMessage({
+		const content = await task.apply({emit,worker:this}, param.args)
+		const message = {
 			id,
 			type:'resolve',
-			content: await task.apply({emit,worker:this}, param.args)
-		})
+			content
+		}
+		if(
+			content &&
+			typeof content =='object' &&
+			typeof content.buffer == 'object' &&
+			content.buffer instanceof ArrayBuffer
+		) postMessage(message,[content.buffer])
+		else postMessage(message)
 	}catch(e){
 		postMessage({
 			id,
@@ -101,7 +109,18 @@ onmessage = ((builder)=>async function(e){
 
 		if(!context) throw THREAD_CLOSED_ERR
 		const {worker,handlers} = context
-		worker.postMessage(JSON.stringify({id,args}))
+
+		const pointers = args.slice(-1)[0]
+		const transferable  =
+			args.length>=2 &&
+			pointers instanceof Array &&
+			!pointers.find(pointer=>!(pointer instanceof ArrayBuffer))
+
+		if(transferable)
+			worker.postMessage({id,args:args.slice(0,-1)},pointers)
+		else
+			worker.postMessage({id,args})
+
 		return new Promise(res=>{
 			const onMessage = (e)=>{
 				if(e.data.id!=id) return
