@@ -1,4 +1,4 @@
-thread.js
+ESThread
 ==================
 modern web worker threading library
 
@@ -35,7 +35,7 @@ and
 
 ```javascript
 import Thread from 'esthread'
-const thread = new Thread(function(a,b){return a+b})
+// const thread = new Thread(function(a,b){return a+b})
 ```
 
 ### [Example1] Simple

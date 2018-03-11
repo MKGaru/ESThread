@@ -1,6 +1,6 @@
 {
   "name": "esthread",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Simple and modern web worker threading library.",
   "main": "dist/thread.js",
   "types": "./dist/thread.d.ts",
@@ -9,7 +9,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/MKGaru/thread.js.git"
+    "url": "git+https://github.com/MKGaru/ESThread.git"
   },
   "keywords": [
     "thread",
@@ -21,9 +21,9 @@
   "author": "MKGaru",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/MKGaru/thread.js/issues"
+    "url": "https://github.com/MKGaru/ESThread/issues"
   },
-  "homepage": "https://github.com/MKGaru/thread.js#readme",
+  "homepage": "https://github.com/MKGaru/ESThread#readme",
   "devDependencies": {
     "typescript": "^2.7.2"
   }
