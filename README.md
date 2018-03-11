@@ -2,8 +2,41 @@ thread.js
 ==================
 modern web worker threading library
 
+[![npm version](https://badge.fury.io/js/esthread.svg)](https://badge.fury.io/js/esthread)
+
 Usage
 --------------------
+
+browser 
+```html
+<script src="https://unpkg.com/esthread"></script>
+<script>
+// any task.
+// const thread = new Thread(function(a,b){return a+b})
+</script>
+```
+
+or esmodule
+
+```html
+<script type="module">
+import Thread from 'https://unpkg.com/esthread/dist/thread.mjs'
+// any task.
+// const thread = new Thread(function(a,b){return a+b})
+</script>
+```
+
+or npm module
+```bash
+npm install esthread --save
+```
+
+and
+
+```javascript
+import Thread from 'esthread'
+const thread = new Thread(function(a,b){return a+b})
+```
 
 ### [Example1] Simple
 ```javascript

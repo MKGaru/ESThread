@@ -1,0 +1,30 @@
+{
+  "name": "esthread",
+  "version": "1.0.1",
+  "description": "Simple and modern web worker threading library.",
+  "main": "dist/thread.js",
+  "types": "./dist/thread.d.ts",
+  "scripts": {
+    "build": "tsc thread.ts --target ES2016 --outDir dist --declaration && move dist\\thread.js dist\\thread.mjs && tsc thread.ts --target ES2015 --module umd --outDir dist"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MKGaru/thread.js.git"
+  },
+  "keywords": [
+    "thread",
+    "promise",
+    "async",
+    "webworker",
+    "worker"
+  ],
+  "author": "MKGaru",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/MKGaru/thread.js/issues"
+  },
+  "homepage": "https://github.com/MKGaru/thread.js#readme",
+  "devDependencies": {
+    "typescript": "^2.7.2"
+  }
+}
