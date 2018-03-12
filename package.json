@@ -1,8 +1,9 @@
 {
   "name": "esthread",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Simple and modern web worker threading library.",
   "main": "dist/thread.js",
+  "module": "dist/thread.mjs",
   "types": "./dist/thread.d.ts",
   "scripts": {
     "build": "tsc thread.ts --target ES2016 --outDir dist --declaration && move dist\\thread.js dist\\thread.mjs && tsc thread.ts --target ES2015 --module umd --outDir dist"
