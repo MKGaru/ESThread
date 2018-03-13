@@ -6,6 +6,12 @@
     else if (typeof define === "function" && define.amd) {
         define(["require", "exports"], factory);
     }
+    else {
+        var exports = {};
+        factory(()=>{},exports);
+        var global = Function('return this')();
+        global.Thread = exports.default;
+    }
 })(function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
