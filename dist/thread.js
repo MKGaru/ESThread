@@ -7,9 +7,9 @@
         define(["require", "exports"], factory);
     }
     else {
-        var exports = {};
+        const exports = {};
         factory(()=>{},exports);
-        var global = Function('return this')();
+        const global = Function('return this')();
         global.Thread = exports.default;
     }
 })(function (require, exports) {

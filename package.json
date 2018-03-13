@@ -1,6 +1,6 @@
 {
   "name": "esthread",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Simple and modern web worker threading library.",
   "main": "dist/thread.js",
   "module": "dist/thread.mjs",
