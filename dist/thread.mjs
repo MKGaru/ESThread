@@ -81,8 +81,7 @@ onmessage = ((builder)=>async function(e){
 			content &&
 			typeof content =='object' &&
 			(
-				(typeof content.buffer == 'object' &&
-				 content.buffer instanceof ArrayBuffer) ||
+				(typeof content.buffer == 'object' && content.buffer instanceof ArrayBuffer) ||
 				(typeof ImageBitmap == 'function' && content instanceof ImageBitmap ) ||
 				(typeof OffscreenCanvas == 'function' && content instanceof OffscreenCanvas )
 			)
