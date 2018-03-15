@@ -97,8 +97,12 @@ onmessage = ((builder)=>async function(e){
 		if(
 			content &&
 			typeof content =='object' &&
-			typeof content.buffer == 'object' &&
-			content.buffer instanceof ArrayBuffer
+			(
+				(typeof content.buffer == 'object' &&
+				 content.buffer instanceof ArrayBuffer) ||
+				(typeof ImageBitmap == 'function' && content instanceof ImageBitmap ) ||
+				(typeof OffscreenCanvas == 'function' && content instanceof OffscreenCanvas )
+			)
 		) postMessage(message,[content.buffer])
 		else postMessage(message)
 	}catch(e){
@@ -128,7 +132,9 @@ onmessage = ((builder)=>async function(e){
             const pointers = args.slice(-1)[0];
             const transferable = args.length >= 2 &&
                 pointers instanceof Array &&
-                !pointers.find(pointer => !(pointer instanceof ArrayBuffer));
+                !pointers.find(pointer => !(pointer instanceof ArrayBuffer ||
+                    (typeof ImageBitmap == 'function' && pointer instanceof ImageBitmap) ||
+                    (typeof OffscreenCanvas == 'function' && pointer instanceof OffscreenCanvas)));
             if (transferable)
                 worker.postMessage({ id, args: args.slice(0, -1) }, pointers);
             else
