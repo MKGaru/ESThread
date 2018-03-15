@@ -108,11 +108,25 @@ thread4.execute(input,[input.buffer]).then(output=>{
 })
 ```
 
-### [Example5] with other libraries
+### [Example5] transferable OffscreenCanvas [[experimental technology](https://developer.mozilla.org/en-US/docs/Web/API/OffscreenCanvas)]
+```javascript
+const canvas = document.createElement('canvas')
+document.body.appendChild(canvas)
+const renderer = new Thread((canvas)=>{
+  const ctx = canvas.getContext('2d')
+  ctx.fillStyle = 'rgb(200, 0, 0)'
+  ctx.fillRect(20, 30, 60, 40)
+  ctx.commit()
+})
+const offscreen = canvas.transferControlToOffscreen() // NOTE: OffscreenCanvas required explicitly enable this feature 2018.3.
+renderer.execute( offscreen , [offscreen] )
+```
+
+### [Example6] with other libraries
 ```javascript
 async function learn(){
   const dl = deeplearn
   // foo bar
 }
-const thread5 = new Thread(learn,['https://unpkg.com/deeplearn@0.5'])
+const thread6 = new Thread(learn,['https://unpkg.com/deeplearn@0.5'])
 ```
