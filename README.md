@@ -125,8 +125,7 @@ renderer.execute( offscreen , [offscreen] )
 ### [Example6] with other libraries
 ```javascript
 async function learn(){
-  const dl = deeplearn
   // foo bar
 }
-const thread6 = new Thread(learn,['https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@0.13.3/dist/tf.min.js'])
+const thread6 = new Thread(learn,['https://cdn.jsdelivr.net/npm/setimmediate@1.0.5/setImmediate.min.js'])
 ```
