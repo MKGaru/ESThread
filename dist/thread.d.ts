@@ -32,7 +32,7 @@
  */
 export default class Thread {
     constructor(task: (this: {
-        emit: () => void;
+        emit: (event: string, ..._args) => void;
         worker: Worker;
     }, ...args) => any, depends?: string | string[]);
     /**

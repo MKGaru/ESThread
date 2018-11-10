@@ -128,5 +128,5 @@ async function learn(){
   const dl = deeplearn
   // foo bar
 }
-const thread6 = new Thread(learn,['https://unpkg.com/deeplearn@0.5'])
+const thread6 = new Thread(learn,['https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@0.13.3/dist/tf.min.js'])
 ```

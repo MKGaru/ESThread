@@ -48,7 +48,7 @@ declare const OffscreenCanvas
    thread3.clone().once(44).then(result=>console.log(result))
  */
 export default class Thread{
-	constructor(task:(this:{emit:()=>void,worker:Worker},...args)=>any,depends:string|string[]=[]){
+	constructor(task:(this:{emit:(event:string,..._args)=>void,worker:Worker},...args)=>any,depends:string|string[]=[]){
 		if(
 			typeof Blob == 'undefined' ||
 			typeof URL == 'undefined' ||
