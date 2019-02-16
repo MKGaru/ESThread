@@ -1,10 +1,16 @@
 {
   "name": "esthread",
-  "version": "1.0.8",
+  "version": "1.1.0",
   "description": "Simple and modern web worker threading library.",
   "main": "dist/thread.js",
   "module": "dist/thread.mjs",
   "types": "./dist/thread.d.ts",
+  "files": [
+    "dist",
+    "package.json",
+    "thread.ts",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc thread.ts --target ES2016 --outDir dist --declaration && move dist\\thread.js dist\\thread.mjs && tsc thread.ts --target ES2015 --module umd --outDir dist"
   },
@@ -26,6 +32,7 @@
   },
   "homepage": "https://github.com/MKGaru/ESThread#readme",
   "devDependencies": {
-    "typescript": "^2.7.2"
-  }
+    "typescript": "^3.3.3"
+  },
+  "dependencies": {}
 }

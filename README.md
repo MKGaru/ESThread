@@ -1,6 +1,6 @@
 ESThread
 ==================
-modern web worker threading library
+modern worker threading library
 
 [![npm version](https://badge.fury.io/js/esthread.svg)](https://badge.fury.io/js/esthread)
 
@@ -128,4 +128,22 @@ async function learn(){
   // foo bar
 }
 const thread6 = new Thread(learn,['https://cdn.jsdelivr.net/npm/setimmediate@1.0.5/setImmediate.min.js'])
+```
+
+### [Example7] NodeJS Worker [[experimental technology](https://nodejs.org/api/worker_threads.html)] ( nodejs > v10.5.0 )
+```bash
+node --experimental-worker examples/nodejs/example3.js
+```
+
+```javascript
+const { Thread } = require('esthread')
+
+function fibonacci(n){
+  // if need other library. you can use require('some library') here.
+  return n<2 ? n : ( fibonacci(n-1) + fibonacci(n-2) )
+}
+const [thread3a,thread3b,thread3c] = new Thread(fibonacci).clone(3)
+thread3a.once(37).then(result=>console.log(result))
+thread3b.once(39).then(result=>console.log(result))
+thread3c.once(41).then(result=>console.log(result))
 ```

@@ -30,11 +30,11 @@
    thread3.clone().once(42).then(result=>console.log(result))
    thread3.clone().once(44).then(result=>console.log(result))
  */
-export default class Thread {
+export declare class Thread {
     constructor(task: (this: {
-        emit: (event: string, ..._args) => void;
+        emit: (event: string, ..._args: any[]) => void;
         worker: Worker;
-    }, ...args) => any, depends?: string | string[]);
+    }, ...args: any[]) => any, depends?: string | string[]);
     /**
      * execute task.
      * @param args
@@ -70,3 +70,4 @@ export default class Thread {
      */
     clone(count: number): Thread[];
 }
+export default Thread;

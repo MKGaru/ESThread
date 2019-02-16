@@ -3,6 +3,12 @@ const referenceCount:{[src:string]:number} = {}
 const THREAD_CLOSED_ERR = new Error('thread has been closed.')
 const DUMMY_FUNCTION_FOR_CLONE = ()=>{}
 
+declare const require
+declare const ImageBitmap
+declare const OffscreenCanvas
+declare const global
+
+const isBrowser = typeof window == 'object'
 const getUniqueId:()=>string = (()=>{
 	const history = new Set<string>()
 	return ()=>{
@@ -13,8 +19,24 @@ const getUniqueId:()=>string = (()=>{
 	}
 })()
 
-declare const ImageBitmap
-declare const OffscreenCanvas
+const WorkerHelper:(string)=>Worker = (src)=>{
+	if (isBrowser){ 
+		return new Worker(src)
+	} else {
+		const worker = new (typeof require == 'function' && require('worker_threads').Worker)(src,{eval:true})
+		Object.defineProperties(worker,{
+			'addEventListener': {
+				value: (event:string,listener:Function)=> worker.on(event,listener) 
+			},
+			'removeEventListener': {
+				value: (event:string,listener:Function)=> worker.off(event,listener) 
+			}
+		})
+		return worker
+	}
+}
+
+
 /**
  * Usage.
  * ------------------
@@ -47,19 +69,35 @@ declare const OffscreenCanvas
    thread3.clone().once(42).then(result=>console.log(result))
    thread3.clone().once(44).then(result=>console.log(result))
  */
-export default class Thread{
+export class Thread{
 	constructor(task:(this:{emit:(event:string,..._args)=>void,worker:Worker},...args)=>any,depends:string|string[]=[]){
-		if(
-			typeof Blob == 'undefined' ||
-			typeof URL == 'undefined' ||
-			typeof Worker == 'undefined'
-		) throw new Error('this browser is not supported.')
+		if(isBrowser){
+			if(
+				typeof Blob == 'undefined' ||
+				typeof URL == 'undefined' ||
+				typeof Worker == 'undefined'
+			) throw new Error('this browser is not supported.')
+		} else if(typeof require == 'function'){
+			try {
+				require('worker_threads').Worker
+			} catch (e) {
+				console.error('\n\u001b[1m\u001b[31m  --experimental-worker is not enabled.\u001b[0m\n')
+				throw e
+			}
+		}
 		if(task===DUMMY_FUNCTION_FOR_CLONE) return this
 
 		if(!(depends instanceof Array)) depends = [depends]
 		//postMessage(message,targetOrigin)
 		let scripts = ''
-		scripts += depends.map(depend=>`importScripts('${depend}')`).join('\n')+'\n'
+		if(isBrowser) scripts += depends.map(depend=>`importScripts('${depend}')`).join('\n')+'\n'
+		else scripts += 
+`
+const { Worker,parentPort } = require('worker_threads')
+const postMessage = (param)=>parentPort.postMessage({data:param})
+let onmessage
+parentPort.on('message',(param)=>onmessage({data:param}))
+`
 		scripts +=
 `
 onmessage = ((builder)=>async function(e){
@@ -86,9 +124,10 @@ onmessage = ((builder)=>async function(e){
 			(
 				(typeof content.buffer == 'object' && content.buffer instanceof ArrayBuffer) ||
 				(typeof ImageBitmap == 'function' && content instanceof ImageBitmap ) ||
-				(typeof OffscreenCanvas == 'function' && content instanceof OffscreenCanvas )
+				(typeof OffscreenCanvas == 'function' && content instanceof OffscreenCanvas ) ||
+				(typeof MessagePort == 'function' && content instanceof MessagePort)
 			)
-		) postMessage(message,[content.buffer])
+		) postMessage(message,[content.buffer?content.buffer:content])
 		else postMessage(message)
 	}catch(e){
 		postMessage({
@@ -98,9 +137,14 @@ onmessage = ((builder)=>async function(e){
 		})
 	}
 })(emit=>${task})`
-		const blob = new Blob([scripts],{type:'text/javascript'})
-		const src = URL.createObjectURL(blob)
-		const worker = new Worker(src)
+		let src:string
+		if(isBrowser){
+			const blob = new Blob([scripts],{type:'text/javascript'})
+			src = URL.createObjectURL(blob)
+		} else {
+			src = scripts
+		}
+		const worker = WorkerHelper(src)
 		Context.set(this,{worker,src,handlers:{}})
 		referenceCount[src]=1
 	}
@@ -122,7 +166,8 @@ onmessage = ((builder)=>async function(e){
 			!pointers.find(pointer=>!(
 				pointer instanceof ArrayBuffer ||
 				(typeof ImageBitmap == 'function' && pointer instanceof ImageBitmap ) ||
-				(typeof OffscreenCanvas == 'function' && pointer instanceof OffscreenCanvas )
+				(typeof OffscreenCanvas == 'function' && pointer instanceof OffscreenCanvas ) ||
+				(typeof MessagePort == 'function' && pointer instanceof MessagePort)
 			))
 
 		if(transferable)
@@ -167,7 +212,7 @@ onmessage = ((builder)=>async function(e){
 		const {src,worker} = context
 		referenceCount[src]--
 		if(!referenceCount[src]){
-			URL.revokeObjectURL(src)
+			if(isBrowser) URL.revokeObjectURL(src)
 			delete referenceCount[src]
 		}
 		worker.terminate()
@@ -217,7 +262,7 @@ onmessage = ((builder)=>async function(e){
 			const context = Context.get(this)
 			if(!context) throw THREAD_CLOSED_ERR
 			const {handlers,src} = context
-			const worker = new Worker(src)
+			const worker = WorkerHelper(src)
 			Context.set(thread,{worker,src,handlers})
 			referenceCount[src]++
 			threads.push(thread)
@@ -225,3 +270,5 @@ onmessage = ((builder)=>async function(e){
 		return typeof count == 'number' ? threads : threads[1]
 	}
 }
+
+export default Thread

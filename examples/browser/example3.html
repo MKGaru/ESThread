@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ESThread example3</title>
+  <div>
+    <button onclick="benchmark(runOnMain)">Run on main thread</button>
+    <button onclick="benchmark(runOnThread)">Run on worker threads</button>
+  </div>
+  <textarea rows="5" cols="40">If use main thread, all ui will be freeze. (for example can not edit here)</textarea>
+</head>
+<body>
+<script src="https://getfirebug.com/releases/lite/1.2/firebug-lite-compressed.js"></script>
+<script src="../../dist/thread.js"></script>
+<script>
+// blocking slow function.
+function fibonacci(n){
+  return n<2 ? n : ( fibonacci(n-1) + fibonacci(n-2) )
+}
+function runOnThread(){
+  const [thread3a,thread3b,thread3c] = new Thread(fibonacci).clone(3)
+  return Promise.all([
+    thread3a.once(38).then((result)=>console.log(result)),
+    thread3b.once(40).then((result)=>console.log(result)),
+    thread3c.once(42).then((result)=>console.log(result))
+  ])
+}
+function runOnMain(){
+  return Promise.all([
+    Promise.resolve(fibonacci(38)).then((result)=>console.log(result)),
+    Promise.resolve(fibonacci(40)).then((result)=>console.log(result)),
+    Promise.resolve(fibonacci(42)).then((result)=>console.log(result))
+  ])
+}
+function benchmark(task){
+  const start = new Date()
+  task().then(()=>{
+    const end = new Date()
+    console.log('time:' + (end-start))
+  })
+  
+}
+</script>
+</body>
+</html>

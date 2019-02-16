@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ESThread example4</title>
+</head>
+<body>
+<script src="https://getfirebug.com/releases/lite/1.2/firebug-lite-compressed.js"></script>
+<script src="../../dist/thread.js"></script>
+<script>
+const thread4 = new Thread(buffer=>{
+  buffer.set([192,168,10,3])
+  return buffer
+})
+const input = new Uint32Array(4)
+thread4.execute(input,[input.buffer]).then(output=>{
+  // input was transfered. ( can not access from sender )
+  console.log(input,output)
+})
+</script>
+</body>
+</html>
