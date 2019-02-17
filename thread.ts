@@ -1,4 +1,11 @@
-const Context = new WeakMap<Thread,{worker:Worker;src:string;handlers:{[key:string]:any[]}}>()
+const Context = new WeakMap<Thread,{
+	worker:Worker;
+	src:string;
+	/** The cloned thread references the same handler */
+	handlers:{[key:string]:any[]},
+	/** The cloned thread references the new handler */
+	localHandlers:{[key:string]:any[]}
+}>()
 const referenceCount:{[src:string]:number} = {}
 const THREAD_CLOSED_ERR = new Error('thread has been closed.')
 const DUMMY_FUNCTION_FOR_CLONE = ()=>{}
@@ -7,6 +14,11 @@ declare const require
 declare const ImageBitmap
 declare const OffscreenCanvas
 declare const global
+
+interface EmitablePromise<T> extends Promise<T>{
+	emit(type:string,args?:any,transferList?:any[])
+	on(type:string,callback:Function)
+}
 
 const isBrowser = typeof window == 'object'
 const getUniqueId:()=>string = (()=>{
@@ -94,25 +106,41 @@ export class Thread{
 		else scripts += 
 `
 const { Worker,parentPort } = require('worker_threads')
-const postMessage = (param)=>parentPort.postMessage({data:param})
+const postMessage = (param,transferList)=>parentPort.postMessage({data:param},transferList)
 let onmessage
 parentPort.on('message',(param)=>onmessage({data:param}))
 `
 		scripts +=
 `
+const handlers = {}
 onmessage = ((builder)=>async function(e){
 	const param =  e.data
 	const id = param.id
-	function emit(type,content){
+	const type = param.type
+	if(type){
+		if(handlers[id][type]){
+			for(const handler of handlers[id][type]){
+				handler(param.args)
+			}
+		}
+		return
+	}
+	if(!handlers[id]) handlers[id] = {}
+	function emit(type,content,transferList){
 		postMessage({
 			id,
 			type,
 			content
-		})
+		},transferList)
 	}
-	const task = builder(emit)
+	function on(type,callback){
+		if(!handlers[id][type]) handlers[id][type] = []
+		if(typeof callback == 'function')
+			handlers[id][type].push(callback)
+	}
+	const task = builder(emit,on)
 	try{
-		const content = await task.apply({emit,worker:this}, param.args)
+		const content = await task.apply({emit,on,worker:this}, param.args)
 		const message = {
 			id,
 			type:'resolve',
@@ -136,7 +164,7 @@ onmessage = ((builder)=>async function(e){
 			content: e.toString()
 		})
 	}
-})(emit=>${task})`
+})((emit,on)=>${task})`
 		let src:string
 		if(isBrowser){
 			const blob = new Blob([scripts],{type:'text/javascript'})
@@ -145,7 +173,7 @@ onmessage = ((builder)=>async function(e){
 			src = scripts
 		}
 		const worker = WorkerHelper(src)
-		Context.set(this,{worker,src,handlers:{}})
+		Context.set(this,{worker,src,handlers:{},localHandlers:{}})
 		referenceCount[src]=1
 	}
 	/**
@@ -153,11 +181,12 @@ onmessage = ((builder)=>async function(e){
 	 * @param args
 	 */
 	execute(...args){
+		const thread = this
 		const context = Context.get(this)
 		const id = getUniqueId()
 
 		if(!context) throw THREAD_CLOSED_ERR
-		const {worker,handlers} = context
+		const {worker,handlers,localHandlers} = context
 
 		const pointers = args.slice(-1)[0]
 		const transferable  =
@@ -175,13 +204,13 @@ onmessage = ((builder)=>async function(e){
 		else
 			worker.postMessage({id,args})
 
-		return new Promise(res=>{
+		const promise = new Promise(res=>{
 			const onMessage = (e)=>{
 				if(e.data.id!=id) return
 				switch(e.data.type){
 					case 'resolve':
 						res(e.data.content)
-						worker.removeEventListener('message',onMessage)
+						// worker.removeEventListener('message',onMessage) // DO NOT REMOVE AFTER RESOLVED.
 						return
 					case 'error':
 						throw e.data.content
@@ -191,10 +220,27 @@ onmessage = ((builder)=>async function(e){
 								handler(e.data.content)
 							}
 						}
+						if(localHandlers[e.data.type]){
+							for(const handler of localHandlers[e.data.type]){
+								handler(e.data.content)
+							}
+						}
 				}
 			}
 			worker.addEventListener('message',onMessage)
 		})
+		Object.defineProperty(promise,'emit',{
+			value(type,args,transferList){
+				worker.postMessage({id,type,args},transferList)
+			}
+		})
+		Object.defineProperty(promise,'on',{
+			value(type,callback){
+				if(!localHandlers[type]) localHandlers[type] = []
+				localHandlers[type].push(callback)
+			}
+		})
+		return promise as EmitablePromise<any>
 	}
 	/**
 	 * execute and terminate.
@@ -262,8 +308,9 @@ onmessage = ((builder)=>async function(e){
 			const context = Context.get(this)
 			if(!context) throw THREAD_CLOSED_ERR
 			const {handlers,src} = context
+			const localHandlers = {}
 			const worker = WorkerHelper(src)
-			Context.set(thread,{worker,src,handlers})
+			Context.set(thread,{worker,src,handlers,localHandlers})
 			referenceCount[src]++
 			threads.push(thread)
 		}

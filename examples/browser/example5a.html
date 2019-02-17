@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ESThread example5a</title>
+</head>
+<body>
+<script src="../../dist/thread.js"></script>
+<script>
+const renderer = new Thread((canvas)=>{
+  function drawMandelbrotSet(imageData,minReal,maxReal,minImag,maxImag) {
+    for(let y = 0; y < imageData.height; y++) {
+      for(let x = 0; x < imageData.width; x++) {
+        const zReal = 0.0
+        const zImag = 0.0
+        const cReal = (maxReal - minReal) / imageData.width * x + minReal
+        const cImag = (maxImag - minImag) / imageData.height * y + minImag
+        setPixelColor(imageData, x, y, zReal, zImag, cReal, cImag)
+      }
+    }
+  }
+  function setPixelColor(imageData, x, y, zReal, zImag, cReal, cImag) {
+    const offset = (y * imageData.width + x) * 4
+    for(let i = 0; i < 128; i++) {
+      if(zReal * zReal + zImag * zImag >= 4) {
+        imageData.data[offset + 0] = i * 10 % 256
+        imageData.data[offset + 1] = i * 20 % 256
+        imageData.data[offset + 2] = i * 30 % 256
+        imageData.data[offset + 3] = 0xFF
+        return
+      }
+
+      const real = zReal * zReal - zImag * zImag + cReal
+      const imag = 2 * zReal * zImag + cImag
+      zReal = real
+      zImag = imag
+    }
+
+    imageData.data[offset + 0] = 0x00
+    imageData.data[offset + 1] = 0x00
+    imageData.data[offset + 2] = 0x00
+    imageData.data[offset + 3] = 0xFF
+  }
+  const ctx = canvas.getContext('2d')
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+  const baseSize = 2
+  const centerX = -2 + Math.random()/2
+  function draw(zoomLevel){
+    const size = Math.pow(2,-zoomLevel) * baseSize
+    drawMandelbrotSet(imageData,centerX - size/2, centerX + size/2, -size/2, +size/2)
+    ctx.putImageData(imageData, 0, 0)
+  }
+  draw(0)
+  let _timer
+  on('update',(zoomLevel)=>{
+    // throttle
+    clearTimeout(_timer)
+    _timer = setTimeout(()=>draw(zoomLevel) , 0)
+  })
+})
+</script>
+<div style="display:flex">
+<div>
+<h1 style="margin:0">Single thread - multi view</h1>
+<div style="display:flex">
+  <div>
+    <canvas id="canvas1" width="512" height="512"></canvas>
+    <div>
+      <input type="range" min="0" max="32" value="0" step="0.01" id="level1" style="width:512px">
+    </div>
+  </div>
+  <div>
+    <canvas id="canvas2" width="512" height="512"></canvas>
+    <div>
+      <input type="range" min="0" max="32" value="0" step="0.01" id="level2" style="width:512px">
+    </div>
+  </div>
+</div>
+<script>
+function setup(canvas,slider){
+  const offscreen = canvas.transferControlToOffscreen() // NOTE: OffscreenCanvas required explicitly enable this feature 2018.3.
+  const task = renderer.execute( offscreen , [offscreen] )
+  
+  slider.addEventListener('input',function(){
+    task.emit('update',+this.value)
+  })
+}
+setup(document.querySelector('#canvas1'),document.querySelector('#level1'))
+setup(document.querySelector('#canvas2'),document.querySelector('#level2'))
+</script>
+</div>
+<div>
+2 canvases rendering by 1 worker(thread).
+<style>
+.docs.workers{
+  display: flex;
+  flex-wrap: wrap;
+  width: 128px;
+  margin-right: 1em;
+}
+.docs.workers>div{
+  width: 128px;
+  height: 128px;
+  box-sizing: border-box;
+  border: solid 1px red;
+  text-align: center;
+  line-height: 128px;
+}
+</style>
+<div style="display: flex">
+<div class="docs workers">
+  <div>Worker 1</div>
+</div>
+<div class="docs workers">
+  <div>Worker 1</div>
+</div>
+</div>
+</div>
+</div>
+</body>
+</html>

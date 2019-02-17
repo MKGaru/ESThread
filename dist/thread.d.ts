@@ -1,3 +1,7 @@
+interface EmitablePromise<T> extends Promise<T> {
+    emit(type: string, args?: any, transferList?: any[]): any;
+    on(type: string, callback: Function): any;
+}
 /**
  * Usage.
  * ------------------
@@ -39,12 +43,12 @@ export declare class Thread {
      * execute task.
      * @param args
      */
-    execute(...args: any[]): Promise<{}>;
+    execute(...args: any[]): EmitablePromise<any>;
     /**
      * execute and terminate.
      * @param args
      */
-    once(...args: any[]): Promise<{}>;
+    once(...args: any[]): Promise<any>;
     /** terminate worker and revoke object. */
     terminate(): void;
     /**

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ESThread example5b</title>
+</head>
+<body>
+<script src="../../dist/thread.js"></script>
+<script>
+const renderer = new Thread(({imageData,size})=>{
+  function drawMandelbrotSet(imageData,minReal,maxReal,minImag,maxImag) {
+    const total = {width: imageData.width/size.w , height: imageData.height/size.h }
+    const ox = total.width  * size.x
+    const oy = total.height * size.y
+    for(let y = 0; y < imageData.height; y++) {
+      for(let x = 0; x < imageData.width; x++) {
+        const zReal = 0.0
+        const zImag = 0.0
+        const cReal = (maxReal - minReal) / total.width * (x + ox) + minReal
+        const cImag = (maxImag - minImag) / total.height * (y + oy) + minImag
+        setPixelColor(imageData, x, y, zReal, zImag, cReal, cImag)
+      }
+    }
+  }
+  function setPixelColor(imageData, x, y, zReal, zImag, cReal, cImag) {
+    const offset = (y * imageData.width + x) * 4
+    for(let i = 0; i < 128; i++) {
+      if(zReal * zReal + zImag * zImag >= 4) {
+        imageData.data[offset + 0] = i * 10 % 256
+        imageData.data[offset + 1] = i * 20 % 256
+        imageData.data[offset + 2] = i * 30 % 256
+        imageData.data[offset + 3] = 0xFF
+        return
+      }
+
+      const real = zReal * zReal - zImag * zImag + cReal
+      const imag = 2 * zReal * zImag + cImag
+      zReal = real
+      zImag = imag
+    }
+
+    imageData.data[offset + 0] = 0x00
+    imageData.data[offset + 1] = 0x00
+    imageData.data[offset + 2] = 0x00
+    imageData.data[offset + 3] = 0xFF
+  }
+  const center = {x: -1.5 , y: 0}
+  const base = {x:1.5 , y:1.5}
+  function draw(zoomLevel){
+    drawMandelbrotSet(
+      imageData,
+      center.x - base.x * Math.pow(2,-zoomLevel),
+      center.x + base.x * Math.pow(2,-zoomLevel),
+      center.y - base.y * Math.pow(2,-zoomLevel),
+      center.y + base.y * Math.pow(2,-zoomLevel)
+    )
+    emit('update',imageData,[imageData.data.buffer])
+  }
+  draw(0)
+  
+  let _timer
+  on('update',(data)=>{
+    // throttle
+    clearTimeout(_timer)
+    _timer = setTimeout(()=>{
+      imageData = data.imageData
+      draw(data.zoomLevel)
+    }, 0)
+  })
+})
+</script>
+<div style="display:flex">
+<div>
+<h1 style="margin:0">Multi threads - single view</h1>
+<div style="display:flex">
+  <div>
+    <canvas id="canvas" width="512" height="512"></canvas>
+    <div>
+      <input type="range" min="0" max="32" value="0" step="0.01" id="level" style="width:512px">
+    </div>
+  </div>
+</div>
+<script>
+function setup(canvas,slider){
+  const ctx = canvas.getContext('2d')
+  const renderers = renderer.clone(4)
+  const sizes = [
+    {x:  0,y:  0,w:1/2,h:1/2},
+    {x:1/2,y:  0,w:1/2,h:1/2},
+    {x:  0,y:1/2,w:1/2,h:1/2},
+    {x:1/2,y:1/2,w:1/2,h:1/2}
+  ]
+  const updates = renderers.map(renderer=>{
+    const index = renderers.indexOf(renderer)
+    const size = sizes[index]
+    const rect = [
+      canvas.width  * size.x,
+      canvas.height * size.y,
+      canvas.width  * size.w,
+      canvas.height * size.h
+    ]
+    const imageData = ctx.getImageData(...rect)
+    const task = renderer.execute({
+      imageData,
+      size
+    },[imageData.data.buffer])
+    task.on('update',(imageData)=>{
+      ctx.putImageData(imageData,rect[0],rect[1])
+    })
+    return (zoomLevel)=> {
+      const imageData = ctx.getImageData(...rect)
+      task.emit('update',{zoomLevel,imageData},[imageData.data.buffer])
+    }
+  })
+  slider.addEventListener('input',function(){
+    updates.forEach(update=>update(+this.value))
+  })
+}
+setup(document.querySelector('#canvas'),document.querySelector('#level'))
+</script>
+</div>
+<div>
+1 canvas rendering by 4 workers(threads).
+<style>
+.docs.workers{
+  display: flex;
+  flex-wrap: wrap;
+  width: 256px;
+}
+.docs.workers>div{
+  width: 128px;
+  height: 128px;
+  box-sizing: border-box;
+  border: solid 1px red;
+  text-align: center;
+  line-height: 128px;
+}
+</style>
+<div class="docs workers">
+  <div>Worker 1</div><div>Worker 2</div>
+  <div>Worker 3</div><div>Worker 4</div>
+</div>
+</div>
+</div>
+</body>
+</html>
