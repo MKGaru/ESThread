@@ -2,6 +2,7 @@ interface EmitablePromise<T> extends Promise<T> {
     emit(type: string, args?: any, transferList?: any[]): any;
     on(type: string, callback: Function): any;
 }
+declare type DependType = string | (() => void);
 /**
  * Usage.
  * ------------------
@@ -37,8 +38,9 @@ interface EmitablePromise<T> extends Promise<T> {
 export declare class Thread {
     constructor(task: (this: {
         emit: (event: string, ..._args: any[]) => void;
+        on: (type: string, callback: Function) => void;
         worker: Worker;
-    }, ...args: any[]) => any, depends?: string | string[]);
+    }, ...args: any[]) => any, depends?: DependType | DependType[]);
     /**
      * execute task.
      * @param args
@@ -63,6 +65,13 @@ export declare class Thread {
      * @param callback
      */
     off(type: string, callback: Function): void;
+    /**
+     * emit event to thread.
+     * @param type
+     * @param args
+     * @param transferList
+     */
+    emit(type: any, args: any, transferList: any): void;
     /** @returns return true if thread is terminated. */
     closed(): boolean;
     /** clone thread

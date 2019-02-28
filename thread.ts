@@ -47,7 +47,18 @@ const WorkerHelper:(string)=>Worker = (src)=>{
 		return worker
 	}
 }
-
+type DependType = string | (()=>void)
+const DependHelper = (depend:DependType)=>{
+	if(typeof depend == 'string') return depend
+	let src = depend.toString()
+	if(depend.prototype) { // function(){}
+		src = src.slice(src.indexOf('{')+1,-1)
+	}
+	else { // arrow function () => {}
+		src = src.slice(src.indexOf('>')+1)
+	}
+	return URL.createObjectURL(new Blob([src],{type:'text/javascript'}))
+}
 
 /**
  * Usage.
@@ -82,7 +93,7 @@ const WorkerHelper:(string)=>Worker = (src)=>{
    thread3.clone().once(44).then(result=>console.log(result))
  */
 export class Thread{
-	constructor(task:(this:{emit:(event:string,..._args)=>void,worker:Worker},...args)=>any,depends:string|string[]=[]){
+	constructor(task:(this:{emit:(event:string,..._args)=>void,on:(type:string,callback:Function)=>void,worker:Worker},...args)=>any,depends:DependType|DependType[]=[]){
 		if(isBrowser){
 			if(
 				typeof Blob == 'undefined' ||
@@ -102,7 +113,7 @@ export class Thread{
 		if(!(depends instanceof Array)) depends = [depends]
 		//postMessage(message,targetOrigin)
 		let scripts = ''
-		if(isBrowser) scripts += depends.map(depend=>`importScripts('${depend}')`).join('\n')+'\n'
+		if(isBrowser) scripts += depends.map(depend=>`importScripts('${DependHelper(depend)}')`).join('\n')+'\n'
 		else scripts += 
 `
 const { Worker,parentPort } = require('worker_threads')
@@ -118,9 +129,19 @@ onmessage = ((builder)=>async function(e){
 	const id = param.id
 	const type = param.type
 	if(type){
-		if(handlers[id][type]){
-			for(const handler of handlers[id][type]){
-				handler(param.args)
+		if(id){
+			if(handlers[id][type]){
+				for(const handler of handlers[id][type]){
+					handler(param.args)
+				}
+			}
+		} else {
+			for(const id in handlers){
+				if(handlers[id][type]){
+					for(const handler of handlers[id][type]){
+						handler(param.args)
+					}
+				}
 			}
 		}
 		return
@@ -206,7 +227,7 @@ onmessage = ((builder)=>async function(e){
 
 		const promise = new Promise(res=>{
 			const onMessage = (e)=>{
-				if(e.data.id!=id) return
+				if(e.data.id && e.data.id!=id) return
 				switch(e.data.type){
 					case 'resolve':
 						res(e.data.content)
@@ -286,6 +307,20 @@ onmessage = ((builder)=>async function(e){
 		if(!context.handlers[type]) return
 		const index = context.handlers[type].indexOf(callback)
 		if(index>=0) context.handlers[type].splice(index,1)
+	}
+	/**
+	 * emit event to thread.
+	 * @param type 
+	 * @param args 
+	 * @param transferList 
+	 */
+	emit(type,args,transferList){
+		const context = Context.get(this)
+
+		if(!context) throw THREAD_CLOSED_ERR
+		if(!type) return
+		const {worker} = context
+		worker.postMessage({type,args},transferList)
 	}
 	/** @returns return true if thread is terminated. */
 	closed(){

@@ -30,6 +30,18 @@ const WorkerHelper = (src) => {
         return worker;
     }
 };
+const DependHelper = (depend) => {
+    if (typeof depend == 'string')
+        return depend;
+    let src = depend.toString();
+    if (depend.prototype) { // function(){}
+        src = src.slice(src.indexOf('{') + 1, -1);
+    }
+    else { // arrow function () => {}
+        src = src.slice(src.indexOf('>') + 1);
+    }
+    return URL.createObjectURL(new Blob([src], { type: 'text/javascript' }));
+};
 /**
  * Usage.
  * ------------------
@@ -86,7 +98,7 @@ export class Thread {
         //postMessage(message,targetOrigin)
         let scripts = '';
         if (isBrowser)
-            scripts += depends.map(depend => `importScripts('${depend}')`).join('\n') + '\n';
+            scripts += depends.map(depend => `importScripts('${DependHelper(depend)}')`).join('\n') + '\n';
         else
             scripts +=
                 `
@@ -103,9 +115,19 @@ onmessage = ((builder)=>async function(e){
 	const id = param.id
 	const type = param.type
 	if(type){
-		if(handlers[id][type]){
-			for(const handler of handlers[id][type]){
-				handler(param.args)
+		if(id){
+			if(handlers[id][type]){
+				for(const handler of handlers[id][type]){
+					handler(param.args)
+				}
+			}
+		} else {
+			for(const id in handlers){
+				if(handlers[id][type]){
+					for(const handler of handlers[id][type]){
+						handler(param.args)
+					}
+				}
 			}
 		}
 		return
@@ -186,7 +208,7 @@ onmessage = ((builder)=>async function(e){
             worker.postMessage({ id, args });
         const promise = new Promise(res => {
             const onMessage = (e) => {
-                if (e.data.id != id)
+                if (e.data.id && e.data.id != id)
                     return;
                 switch (e.data.type) {
                     case 'resolve':
@@ -275,6 +297,21 @@ onmessage = ((builder)=>async function(e){
         const index = context.handlers[type].indexOf(callback);
         if (index >= 0)
             context.handlers[type].splice(index, 1);
+    }
+    /**
+     * emit event to thread.
+     * @param type
+     * @param args
+     * @param transferList
+     */
+    emit(type, args, transferList) {
+        const context = Context.get(this);
+        if (!context)
+            throw THREAD_CLOSED_ERR;
+        if (!type)
+            return;
+        const { worker } = context;
+        worker.postMessage({ type, args }, transferList);
     }
     /** @returns return true if thread is terminated. */
     closed() {
